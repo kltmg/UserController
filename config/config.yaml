@@ -1,0 +1,15 @@
+mysql:
+  host: 106.53.254.162
+  port: 3307
+  username: root
+  password: YFzx2019!
+  conn_max_lifetime: 14400
+  max_idle_conns: 500
+  max_open_conns: 500
+
+redis:
+  host: 106.53.254.162
+  port: 6380
+  password: YFzx2019!
+  pool_size: 30
+  token_max_expired_time: 3600
