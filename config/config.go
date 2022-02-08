@@ -28,6 +28,15 @@ type Config struct {
 		PoolSize       int    `yaml:"pool_size"`
 		TokenMaxExTime int    `yaml:"token_max_expired_time"`
 	}
+	HTTP struct {
+		Port           string `yaml:"port"`
+		StaticFilePath string `yaml:"static_file_path"`
+	}
+	RPC struct {
+		Address      string `yaml:"address"`
+		ConnPoolSize int    `yaml:"conn_pool_size"`
+	}
+	DefaultImagePath string `yaml:"default_image_path"`
 }
 
 func GetConfig() *Config {

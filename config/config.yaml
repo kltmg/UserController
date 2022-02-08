@@ -13,3 +13,13 @@ redis:
   password: YFzx2019!
   pool_size: 30
   token_max_expired_time: 3600
+
+http:
+  port: 8080
+  static_file_path: ../static/
+
+rpc:
+  address: :9092
+  conn_pool_size: 200
+
+default_image_path: andy.jpg
