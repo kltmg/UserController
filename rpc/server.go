@@ -113,9 +113,11 @@ func (r *RPCServer) handle(conn *net.TCPConn) {
 		n, err = conn.Read(buff)
 		if err != nil {
 			log.Println("read data info failed. err:" + err.Error())
+			return
 		}
 		if n <= 0 {
 			log.Println("no data")
+			return
 		}
 
 		//调度,处理实际的内容.

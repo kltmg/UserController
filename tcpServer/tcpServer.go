@@ -40,6 +40,8 @@ func main() {
 	server.Register("GetProfile", GetProfile, GetProfileService)
 	server.Register("Login", Login, LoginService)
 	server.Register("SignUp", SignUp, SignUpService)
+	server.Register("UpdateNickName", UpdateNickName, UpdateNickNameService)
+	server.Register("UploadProfilePicture", UploadProfilePicture, UploadProfilePictureService)
 	server.ListenAndServe(Config.RPC.Address)
 }
 
@@ -53,7 +55,12 @@ func Login(v interface{}) interface{} {
 func SignUp(v interface{}) interface{} {
 	return SignUpService(*v.(*protocol.ReqSignUp))
 }
-
+func UpdateNickName(v interface{}) interface{} {
+	return UpdateNickNameService(*v.(*protocol.ReqUpdateNickName))
+}
+func UploadProfilePicture(v interface{}) interface{} {
+	return UploadProfilePictureService(*v.(*protocol.ReqUpdateProfilePic))
+}
 func SignUpService(req protocol.ReqSignUp) (resp protocol.RespSignUp) {
 	if req.UserName == "" || req.Password == "" {
 		resp.Ret = 1
@@ -137,6 +144,72 @@ func LoginService(req protocol.ReqLogin) (resp protocol.RespLogin) {
 	resp.Ret = 0
 	resp.Token = token
 	log.Println("tcp.login: login done.")
+	return
+}
+
+func UpdateNickNameService(req protocol.ReqUpdateNickName) (resp protocol.RespUpdateNickName) {
+	ok, err := checkToken(req.UserName, req.Token)
+	if err != nil {
+		resp.Ret = 3
+		log.Println("tcp.UpdateNickNameService: checkToken error." + err.Error())
+		return
+	}
+	if !ok {
+		resp.Ret = 1
+		log.Println("tcp.UpdateNickNameService: checkToken failed.")
+		return
+	}
+	if err := redis.InvaildCache(req.UserName); err != nil {
+		resp.Ret = 3
+		log.Println("tcp.UpdateNickNameService: InvaildCache error." + err.Error())
+		return
+	}
+	ok, err = mysql.UpdateNikcName(req.UserName, req.NickName)
+	if err != nil {
+		resp.Ret = 3
+		log.Println("tcp.UpdateNickNameService: UpdateNikcName error." + err.Error())
+		return
+	}
+	if !ok {
+		resp.Ret = 2
+		log.Println("tcp.UpdateNickNameService: UpdateNikcName failed.")
+		return
+	}
+	resp.Ret = 0
+	log.Println("tcp.UpdateNickNameService done. username:" + req.UserName + ", nickname:" + req.NickName)
+	return
+}
+
+func UploadProfilePictureService(req protocol.ReqUpdateProfilePic) (resp protocol.RespUpdateProfilePic) {
+	ok, err := checkToken(req.UserName, req.Token)
+	if err != nil {
+		resp.Ret = 3
+		log.Println("tcp.UploadProfilePictureService: checkToken error." + err.Error())
+		return
+	}
+	if !ok {
+		resp.Ret = 1
+		log.Println("tcp.UploadProfilePictureService: checkToken failed.")
+		return
+	}
+	if err := redis.InvaildCache(req.UserName); err != nil {
+		resp.Ret = 3
+		log.Println("tcp.UploadProfilePictureService: InvaildCache error." + err.Error())
+		return
+	}
+	ok, err = mysql.UploadProfilePicture(req.UserName, req.FileName)
+	if err != nil {
+		resp.Ret = 3
+		log.Println("tcp.UploadProfilePictureService: UploadProfilePictureService error." + err.Error())
+		return
+	}
+	if !ok {
+		resp.Ret = 2
+		log.Println("tcp.UploadProfilePictureService: UploadProfilePictureService failed.")
+		return
+	}
+	resp.Ret = 0
+	log.Println("tcp.UploadProfilePictureService done. username:" + req.UserName + ", picname:" + req.FileName)
 	return
 }
 

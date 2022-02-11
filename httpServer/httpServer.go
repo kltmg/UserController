@@ -4,8 +4,11 @@ import (
 	"UserController/config"
 	"UserController/protocol"
 	"UserController/rpc"
+	"UserController/utils"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"text/template"
 )
@@ -175,7 +178,6 @@ func Login(rw http.ResponseWriter, req *http.Request) {
 			templateLogin(rw, LoginResponse{Msg: "登陆失败!"})
 			return
 		}
-
 		switch resp.Ret {
 		case 0:
 			cookie := http.Cookie{Name: "username", Value: username, MaxAge: Config.REDIS.TokenMaxExTime}
@@ -188,15 +190,101 @@ func Login(rw http.ResponseWriter, req *http.Request) {
 		default:
 			templateLogin(rw, LoginResponse{Msg: "登陆失败!"})
 		}
-		log.Println("http.Login: Login done.")
+		log.Println("http.Login: Login done. username:" + username)
 	}
 
 }
 func UpdateNickName(rw http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		token, err := req.Cookie("token")
+		if err != nil {
+			log.Println(err)
+			templateLogin(rw, LoginResponse{Msg: ""})
+			return
+		}
 
+		username := req.FormValue("username")
+		nickname := req.FormValue("nickname")
+
+		req := protocol.ReqUpdateNickName{
+			UserName: username,
+			NickName: nickname,
+			Token:    token.Value,
+		}
+		resp := protocol.RespUpdateNickName{}
+
+		if err := rpcClient.Call("UpdateNickName", req, &resp); err != nil {
+			log.Println("http.UpdateNickName: Call UpdateNickName failed. username:" + username + ", err:" + err.Error())
+			templateJump(rw, JumpResponse{Msg: "修改昵称失败!"})
+			return
+		}
+		switch resp.Ret {
+		case 0:
+			templateJump(rw, JumpResponse{Msg: "修改昵称成功"})
+		case 1:
+			templateLogin(rw, LoginResponse{Msg: "请重新登陆"})
+		case 2:
+			templateJump(rw, JumpResponse{Msg: "用户不存在"})
+		default:
+			templateJump(rw, JumpResponse{Msg: "修改昵称失败"})
+		}
+		log.Println("http.UpdateNickName: Call UpdateNickName done. username:" + username + ", nickname:" + nickname + ", ret:" + strconv.Itoa(resp.Ret))
+	}
 }
 func UploadProfilePicture(rw http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		token, err := req.Cookie("token")
+		if err != nil {
+			log.Println(err)
+			templateLogin(rw, LoginResponse{Msg: ""})
+			return
+		}
+		username := req.FormValue("username")
+		file, head, err := req.FormFile("image")
+		if err != nil {
+			log.Println("http.UploadProfilePicture: Call UploadProfilePicture failed. username:" + username + ", err:" + err.Error())
+			templateJump(rw, JumpResponse{Msg: "获取图片失败!"})
+			return
+		}
+		defer file.Close()
+		newName, isLegal := utils.CheckAndCreateFileName(head.Filename)
+		if !isLegal {
+			templateJump(rw, JumpResponse{Msg: "文件格式不支持!"})
+			return
+		}
+		filePath := Config.HTTP.StaticFilePath + newName
+		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+		defer dstFile.Close()
+		//拷贝文件.
+		_, err = io.Copy(dstFile, file)
+		if err != nil {
+			templateJump(rw, JumpResponse{Msg: "文件拷贝出错!"})
+			return
+		}
 
+		req := protocol.ReqUpdateProfilePic{
+			UserName: username,
+			FileName: newName,
+			Token:    token.Value,
+		}
+		resp := protocol.RespUpdateProfilePic{}
+		if err := rpcClient.Call("UploadProfilePicture", req, &resp); err != nil {
+			log.Println("http.UploadProfilePicture: Call UploadProfilePicture failed. username:" + username + ", err:" + err.Error())
+			templateJump(rw, JumpResponse{Msg: "修改头像失败!"})
+			return
+		}
+		switch resp.Ret {
+		case 0:
+			templateJump(rw, JumpResponse{Msg: "修改头像成功"})
+		case 1:
+			templateLogin(rw, LoginResponse{Msg: "请重新登陆"})
+		case 2:
+			templateJump(rw, JumpResponse{Msg: "用户不存在"})
+		default:
+			templateJump(rw, JumpResponse{Msg: "修改头像失败"})
+		}
+		log.Println("http.UploadProfilePicture: Call UploadProfilePicture done. username:" + username + ", picname:" + newName + ", ret:" + strconv.Itoa(resp.Ret))
+	}
 }
 
 func templateLogin(rw http.ResponseWriter, resp LoginResponse) {

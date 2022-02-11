@@ -65,3 +65,11 @@ func SetToken(userName string, token string, expiration int64) error {
 	}
 	return nil
 }
+
+func InvaildCache(username string) error {
+	err := client.HSet(username, "vaild", "").Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}

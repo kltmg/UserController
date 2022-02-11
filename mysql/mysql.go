@@ -41,6 +41,8 @@ func Connect() error {
 	getProfileSt = dbPrepare(db, "SELECT nick_name, pic_name FROM user_info WHERE user_name = ?")
 	createAccountSt = dbPrepare(db, "INSERT INTO login_info (user_name, password) values (?, ?)")
 	createProfileSt = dbPrepare(db, "INSERT INTO user_info (user_name, nick_name) values (?, ?)")
+	updateNickNameSt = dbPrepare(db, "UPDATE user_info SET nick_name=? WHERE user_name=?")
+	updateProfilePicSt = dbPrepare(db, "UPDATE user_info SET pic_name=? WHERE user_name=?")
 	return nil
 
 }
@@ -103,4 +105,20 @@ func CreateProfile(userName string, nickName string) error {
 		return err
 	}
 	return nil
+}
+
+func UpdateNikcName(userName string, nickName string) (bool, error) {
+	_, err := updateNickNameSt.Exec(nickName, userName)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func UploadProfilePicture(userName string, picName string) (bool, error) {
+	_, err := updateProfilePicSt.Exec(picName, userName)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
